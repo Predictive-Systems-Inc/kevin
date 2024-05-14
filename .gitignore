@@ -1,1 +1,10 @@
 .env
+
+__pycache__/
+*.pyc
+
+debug/*
+
+.chainlit/
+.conda/
+.files/
