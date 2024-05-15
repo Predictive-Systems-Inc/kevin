@@ -18,9 +18,7 @@ Ask one question with missing information in proper order.
 """
   openai_chat_model = ChatOpenAI(model="gpt-3.5-turbo")
   prompt = ChatPromptTemplate.from_template(template)
-  print(prompt)
   chain = prompt | openai_chat_model | StrOutputParser()
-  print(requirements)
   result = chain.invoke(requirements)
-  print('ask_next_question:', result)
+  print('ask_next_question:', result)  
   return result

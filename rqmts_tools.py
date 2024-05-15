@@ -15,9 +15,10 @@ class UpdateRequirementInput(BaseModel):
 
 
 class UpdateRequirement(BaseTool):
-    """Agent tool that updates the requirement with the provided value."""
+    """Agent tool that updates the requirement with the provided value. 
+    Requirements can be model, fields, or folder_location."""
     name = "update_requirement"
-    description = ("Useful when question about requirement has been answered.")
+    description = ("Useful when question about requirement has been answered. Requirements can be model, fields, or folder_location.")
     args_schema: Type[BaseModel] = UpdateRequirementInput
 
     def _run(self, variable_name: str, value: str, *args, **kwargs) -> dict:

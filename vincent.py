@@ -27,7 +27,7 @@ async def on_chat_start():
         [initial_message]
     )
     msg = cl.Message(content="""
-                     Hi! I'm Kevin, your programming assistant. 
+                     Hi! I'm Kevin🤖, your programming assistant⌨️. 
                      I can help build CRUD pages.
                      What is the model entity you want to work with?
                      """)
@@ -95,6 +95,16 @@ async def next_phase(requirements):
         await cl.Message(
             content="Yes!",
         ).send()
-        await generate_code(requirements)
+
+        msg = cl.Message(content="")
+        await msg.send()
+
+        # do some work
+        await cl.sleep(1)
+        generate_code(requirements)
+
+        msg = cl.Message(content="Code generation complete.")
+        await msg.send()
+
         return "end"
 

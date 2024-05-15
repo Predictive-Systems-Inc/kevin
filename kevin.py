@@ -1,38 +1,111 @@
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import StrOutputParser
-from langchain.schema.runnable import Runnable
-from langchain.schema.runnable.config import RunnableConfig
-
 import chainlit as cl
+from langchain_core.messages import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
+
+from code_gen import generate_code
+from rqmts_graph import get_requirements_bot
+from probe_chain import ask_next_question
+
+template = ChatPromptTemplate.from_messages([
+    ("user", "{content}"),
+])
+
+rqmt_bot = get_requirements_bot()
 
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = ChatOpenAI(streaming=True)
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "You're a software programming assistant that can create new code based on a given boilerplate.",
-            ),
-            ("human", "{question}"),
-        ]
+    # Set up the user session
+    initial_message = "What is the model entity you want to work with?"
+    cl.user_session.set("runnable", rqmt_bot)
+    cl.user_session.set(
+        "requirements",
+        {"model": "", "fields": [], "folder_location": "" },
     )
-    runnable = prompt | model | StrOutputParser()
-    cl.user_session.set("runnable", runnable)
-
+    cl.user_session.set(
+        "message_history",
+        [initial_message]
+    )
+    msg = cl.Message(content="""
+                     Hi! I'm Kevin 🤖, your programming assistant 💻. I can help build CRUD pages.
+                     What is the model entity you want to work with?
+                     """)
+    await msg.send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    runnable = cl.user_session.get("runnable")  # type: Runnable
+    # Initiate the context variables with user_session variables
+    requirements = cl.user_session.get("requirements")
+    message_history = cl.user_session.get("message_history")
+    input_message = HumanMessage(content=message.content)
+    # print("Input message:\n", input_message.content)
 
-    msg = cl.Message(content="")
+    # # append input_message to message_history
+    message_history.append(input_message.content)
 
-    async for chunk in runnable.astream(
-        {"question": message.content},
-        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
-    ):
-        await msg.stream_token(chunk)
+    # # Pass the requirements object to the bot when it is invoked
+    # # send the last conversation message to the bot
+    print('********************************************')
+    print(message_history[-2:])
+    response = rqmt_bot.invoke(
+        {"messages": message_history[-2:],
+         "requirements": requirements},
+    )
 
-    await msg.send()
+    # # Update requirements in the session
+    new_requirements = response.get("requirements")
+    cl.user_session.set("requirements", new_requirements)
+    cl.user_session.set("message_history", response.get("messages"))
+
+    # print("Session requirements: ", cl.user_session.get("requirements"))
+
+    # # Send the tool response to the user
+    await cl.Message(
+        content=response["messages"][-1].content).send()
+    
+    # if requirements is Complete, ask the user to generate  the code
+    if len(requirements['model']) > 0 and \
+       len(requirements['fields']) > 0 and \
+       len(requirements['folder_location']) > 0:
+      await next_phase(new_requirements)
+      return
+  
+    # # let's probe the user for the next question
+    probe = ask_next_question(new_requirements)
+    message_history.append(probe)
+
+    # Send the probe to the user
+    await cl.Message(content=probe).send()
+
+    
+async def next_phase(requirements):
+    message = f"""Your requirements are complete. Do you want to generate the code?
+    Model: {requirements['model']}
+    Fields: {requirements['fields']}
+    Folder Location: {requirements['folder_location']}"""
+
+    res = await cl.AskActionMessage(
+        content=message,
+        actions=[
+            cl.Action(name="continue", value="continue", label="✅ Yes!"),
+            cl.Action(name="cancel", value="cancel", label="❌ No"),
+        ],
+    ).send()
+
+    if res and res.get("value") == "continue":
+        await cl.Message(
+            content="Yes!",
+        ).send()
+
+        msg = cl.Message(content="")
+        await msg.send()
+
+        # do some work
+        await cl.sleep(1)
+        generate_code(requirements)
+
+        msg = cl.Message(content="Code generation complete.")
+        await msg.send()
+
+        return "end"
+
