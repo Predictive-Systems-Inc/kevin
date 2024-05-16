@@ -41,5 +41,5 @@ class GetRequirements(BaseTool):
         raise NotImplementedError("get_requirements does not support async.")
 
 
-tool_box = [UpdateRequirement(), GetRequirements()]
+tool_box = [UpdateRequirement()]
 tool_executor = ToolExecutor(tool_box)

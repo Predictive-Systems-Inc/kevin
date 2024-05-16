@@ -12,13 +12,13 @@ from langgraph.prebuilt import ToolInvocation
 from rqmts_tools import tool_box, tool_executor
 
 llm_model = ChatOpenAI(
+    model="gpt-4o",
     temperature=0,
 )
 
 state_update_model = llm_model.bind_functions(
     [convert_to_openai_function(t) for t in tool_box]
 )
-
 
 # In this case, the state of the graph consists of two variables:
 # 'messages', and 'requirements'.
@@ -38,11 +38,11 @@ def call_agent(state):
     """
 
     messages = state['messages']
-    print("Messages sent to model for generation:\n")
-    pprint(messages)
+    # print("Messages sent to model for generation:\n")
+    # pprint(messages)
 
     response = state_update_model.invoke(messages)
-    print("Response returned from state_update_model:\n", response)
+    # print("Response returned from state_update_model:\n", response)
     return {
         "messages": [response],
     }
@@ -66,6 +66,7 @@ def call_tools(state):
     # ...and format the corresponding FunctionMessage, which will be added to
     # the message list.
     function_message = FunctionMessage(content=str(response), name=action.tool)
+    print(function_message)
 
     if function_message.name == "update_requirement":
         # If requirements did not exist, it is created

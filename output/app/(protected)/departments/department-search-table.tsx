@@ -1,5 +1,5 @@
+ 
 
-//start of the code below, include use client
 'use client'
 
 import React from 'react'
@@ -69,23 +69,13 @@ export function DepartmentSearchTable({ departmentsPromise, categories }: Depart
         ),
         cell: ({ row }) => {
           const name = row.original.name
-          const category: string = row.original.category?.name ?? ''
+          const priority: string = row.original.priority?.name ?? ''
           return (
             <DataTableComponentField
               value={name}
-              component={category && <PriorityBadge priority={category} />}
+              component={priority && <PriorityBadge priority={priority} />}
             />
           )
-        }
-      },
-      {
-        accessorKey: 'type',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Type" />
-        ),
-        cell: ({ row }) => {
-          const type = row.original.type
-          return <DataTableTextField value={type} />
         }
       },
       {
@@ -99,12 +89,23 @@ export function DepartmentSearchTable({ departmentsPromise, categories }: Depart
         }
       },
       {
-        accessorKey: 'isRequired',
+        accessorKey: 'category',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Is Required" />
+          <DataTableColumnHeader column={column} title="Category" />
         ),
         cell: ({ row }) => {
-          return <DataTableTextField value={row.original.isRequired?.toString() ?? ''} />
+          const category = row.original.category?.name ?? ''
+          return <DataTableTextField value={category} />
+        }
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Type" />
+        ),
+        cell: ({ row }) => {
+          const type = row.original.type
+          return <DataTableTextField value={type} />
         }
       },
       {
@@ -139,9 +140,9 @@ export function DepartmentSearchTable({ departmentsPromise, categories }: Depart
       placeholder: 'Filter names...'
     },
     {
-      id: 'type',
-      title: 'Department Type',
-      placeholder: 'Filter types...'
+      id: 'description',
+      title: 'Description',
+      placeholder: 'Filter descriptions...'
     }
   ]
 
@@ -153,7 +154,7 @@ export function DepartmentSearchTable({ departmentsPromise, categories }: Depart
     pageCount,
     searchableColumns,
     filterableColumns,
-    hiddenColumns: ['category', 'description', 'isRequired']
+    hiddenColumns: ['type']
   })
 
   return (
@@ -169,4 +170,5 @@ export function DepartmentSearchTable({ departmentsPromise, categories }: Depart
     />
   )
 }
+
 

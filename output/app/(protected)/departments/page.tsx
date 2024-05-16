@@ -1,9 +1,10 @@
  
+
 import { SearchParams } from '@ui/core/types/index'
 import { DataTableSkeleton } from '@ui/core/data-table/data-table-skeleton'
 import { DepartmentSearchTable } from './department-search-table'
 import { DepartmentWithRelations } from '@db/prisma/zod'
-import { Category} from '@db/prisma'
+import { Category } from '@db/prisma'
 
 import React from 'react'
 
@@ -55,4 +56,5 @@ export default async function DepartmentSearchPage({ searchParams }: IndexPagePr
     </div>    
   )
 }
+
 

@@ -1,3 +1,4 @@
+ 
 
 'use client'
 
@@ -34,10 +35,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Department name is required' }),
-  type: z.string().min(1, { message: 'Department type is required' }),
-  category: z.string().min(1, { message: 'Category is required' }),
   description: z.string().min(1, { message: 'Description is required' }),
-  isRequired: z.boolean().default(false),
+  categoryId: z.string().min(1, { message: 'Category is required' }),
+  type: z.string().min(1, { message: 'Type is required' }),
 })
 
 interface AddDepartmentProps {
@@ -54,10 +54,9 @@ export default function AddDepartment({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      type: '',
-      category: '',
       description: '',
-      isRequired: false,
+      categoryId: '',
+      type: '',
     },
   })
 
@@ -123,12 +122,12 @@ export default function AddDepartment({
                 />
                 <FormField
                   control={form.control}
-                  name="type"
+                  name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department Type</FormLabel>
+                      <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter department type" {...field} />
+                        <Input placeholder="Enter description" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -136,13 +135,13 @@ export default function AddDepartment({
                 />
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="categoryId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
                       <FormControl>
                         <Combobox
-                          id="CategoryId"
+                          id="categoryId"
                           data={categories.map((category) => ({
                             value: category.id,
                             label: category.name,
@@ -157,33 +156,12 @@ export default function AddDepartment({
                 />
                 <FormField
                   control={form.control}
-                  name="description"
+                  name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Type</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter description" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="isRequired"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Is Required</FormLabel>
-                      <FormControl>
-                        <Combobox
-                          id="IsRequiredId"
-                          data={[
-                            { value: true, label: 'Yes' },
-                            { value: false, label: 'No' }
-                          ]}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        />
+                        <Input placeholder="Enter type" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

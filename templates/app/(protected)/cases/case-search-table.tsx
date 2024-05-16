@@ -15,7 +15,6 @@ import { TableFloatingBarContent } from '@common/components/table-floating-bar-c
 import DataTableTextField from '@ui/core/data-table/data-table-text-field'
 import TableActions from '@common/components/table-actions'
 import DataTableComponentField from '@ui/core/data-table/data-table-component-field'
-import PriorityBadge from '@ui/core/priority-badge'
 import { CaseWithRelations } from '@db/prisma/zod'
 import { MdPageview } from 'react-icons/md'
 import { useRouter } from 'next/navigation'
@@ -72,7 +71,7 @@ export function CaseSearchTable({ casesPromise, categories }: CaseSearchTablePro
           return (
             <DataTableComponentField
               value={title}
-              component={priority && <PriorityBadge priority={priority} />}
+              component={priority/>}
             />
           )
         }
