@@ -1,0 +1,85 @@
+// Define the Case model
+
+model Case {
+  id            String         @id @default(cuid()) // Unique identifier for each case
+  title         String // Title of the case
+  description   String? // Optional description of the case
+  parties       Party[] // One-to-many relation to the Party model
+  documents     Document[] // One-to-many relation to the Document model
+  actions       Action[] // One-to-many relation to the Action model
+  timeSpent     TimeSpent[] // One-to-many relation to the TimeSpent model
+  reimbursements Reimbursement[] // One-to-many relation to the Reimbursement model
+  createdAt     DateTime       @default(now()) // Timestamp of case creation
+  updatedAt     DateTime       @updatedAt // Timestamp of the last update
+}
+
+// Define the Party model
+
+model Party {
+  id        String   @id @default(cuid()) // Unique identifier for each party
+  name      String // Name of the party
+  caseId    String // Foreign key referencing the Case model
+  case      Case     @relation(fields: [caseId], references: [id]) // Relation to the Case model
+  createdAt DateTime @default(now()) // Timestamp of party creation
+  updatedAt DateTime @updatedAt // Timestamp of the last update
+
+  // Index on caseId to optimize queries involving the case field
+  @@index([caseId])
+}
+
+// Define the Document model
+
+model Document {
+  id        String   @id @default(cuid()) // Unique identifier for each document
+  title     String // Title of the document
+  content   String? // Optional content of the document
+  caseId    String // Foreign key referencing the Case model
+  case      Case     @relation(fields: [caseId], references: [id]) // Relation to the Case model
+  createdAt DateTime @default(now()) // Timestamp of document creation
+  updatedAt DateTime @updatedAt // Timestamp of the last update
+
+  // Index on caseId to optimize queries involving the case field
+  @@index([caseId])
+}
+
+// Define the Action model
+
+model Action {
+  id        String   @id @default(cuid()) // Unique identifier for each action
+  description String // Description of the action
+  caseId    String // Foreign key referencing the Case model
+  case      Case     @relation(fields: [caseId], references: [id]) // Relation to the Case model
+  createdAt DateTime @default(now()) // Timestamp of action creation
+  updatedAt DateTime @updatedAt // Timestamp of the last update
+
+  // Index on caseId to optimize queries involving the case field
+  @@index([caseId])
+}
+
+// Define the TimeSpent model
+
+model TimeSpent {
+  id        String   @id @default(cuid()) // Unique identifier for each time entry
+  duration  Int // Duration of time spent in minutes
+  caseId    String // Foreign key referencing the Case model
+  case      Case     @relation(fields: [caseId], references: [id]) // Relation to the Case model
+  createdAt DateTime @default(now()) // Timestamp of time entry creation
+  updatedAt DateTime @updatedAt // Timestamp of the last update
+
+  // Index on caseId to optimize queries involving the case field
+  @@index([caseId])
+}
+
+// Define the Reimbursement model
+
+model Reimbursement {
+  id        String   @id @default(cuid()) // Unique identifier for each reimbursement
+  amount    Float // Amount of the reimbursement
+  caseId    String // Foreign key referencing the Case model
+  case      Case     @relation(fields: [caseId], references: [id]) // Relation to the Case model
+  createdAt DateTime @default(now()) // Timestamp of reimbursement creation
+  updatedAt DateTime @updatedAt // Timestamp of the last update
+
+  // Index on caseId to optimize queries involving the case field
+  @@index([caseId])
+}
