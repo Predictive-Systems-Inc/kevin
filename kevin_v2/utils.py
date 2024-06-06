@@ -1,10 +1,9 @@
 import os
 import re
 import sys
-from functools import partial
 from operator import itemgetter
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -32,15 +31,20 @@ def create_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
     QUERY:
     {question}
 
-    You are a helpful assistant knowledgeable in NextJS and Prisma. Use the available context to answer the question. If you can't answer the question, say you don't know.
+    You are a helpful assistant knowledgeable in NextJS and Prisma. Use the available context to answer the question.
 
     If the task requires generating code, respond immediately in the following format:
-    Filename: [file name and extension only, always exclude path and unnecessary symbols, e.g. index.tsx or index.ts]
-    Code: [code]
+    Filename: [inster actual filename here, file name and extension only, always exclude path and unnecessary symbols, strictly e.g. index.tsx or index.ts or schema.prisma]
+    Code: [insert actual code here]
 
-    If the task requires getting the lint warnings/errors for a specific file, respond immediately in the following format:
-    Errors: [errors]
-    Commit message: [commit message eg. "feat: added reimbursement api route"]
+    If the task requires modifying a specific file, respond immediately in the following format:
+    Code: [insert actual code here]
+
+    If the task requires fixing a given code based on a given list of errors, respond immediately in the following format:
+    Code: [insert actual code here]
+
+    If the task requires getting the lint warnings/errors for a specific file in a given set of errors/warnings, respond immediately in the following format:
+    Errors: [insert actual errors here]
     However, if there are no errors, respond with "No errors found."
     """
 
@@ -80,8 +84,7 @@ def get_output_directory() -> str:
     while True:
         output_dir = input("Enter output directory (type 'bye' to exit): ")
         if output_dir.lower() == 'bye':
-            print("Goodbye!")
-            sys.exit()
+            return None
 
         output_dir_path = Path(output_dir)
         if not output_dir_path.exists() or not output_dir_path.is_dir():
@@ -95,29 +98,58 @@ def extract_filename_and_code(data: str) -> Tuple[str, str]:
     Cleans the filename by removing special characters except for the dot.
     """
     filename_pattern = re.compile(r"Filename:\s*(.+)")
-    code_pattern = re.compile(r"Code:\s*```([\s\S]*?)```", re.MULTILINE)
+    code_pattern = re.compile(r"Code:\s*```(?:[a-z]*)\n([\s\S]*?)```", re.MULTILINE)
 
     filename_match = filename_pattern.search(data)
     code_match = code_pattern.search(data)
 
-    if not filename_match or not code_match:
-        return '', ''
+    if filename_match:
+        filename = re.sub(r'[^a-zA-Z0-9\.-]', '', filename_match.group(1)).strip()
+    else:
+        filename = 'unknown_filename'
 
-    filename = re.sub(r'[^a-zA-Z0-9\.]', '', filename_match.group(1)).strip()
-    code = code_match.group(1).strip()
+    if code_match:
+        code = code_match.group(1).strip()
+    else:
+        code = ''
 
+    print(f"Extracted filename: {filename}")
+    print(f"Extracted code: {code}")
     return filename, code
 
-def write_code_to_file(directory: str, filename: str, code: str) -> str:
+def write_code_to_file(file_path: str, code: str) -> str:
     """
-    Writes the provided code to a file in the specified directory.
+    Writes the provided code to the specified file path, overwriting it if it exists.
     """
-    if not filename or not code:
-        raise ValueError("Filename or code not provided")
+    if not file_path or not code:
+        raise ValueError("File path or code not provided")
 
-    os.makedirs(directory, exist_ok=True)
-    file_path = Path(directory) / filename
-    file_path.write_text(code)
-    print(f"Code written to {file_path}")
+    path = Path(file_path)
+    os.makedirs(path.parent, exist_ok=True)
+    path.write_text(code)
+    print(f"Code written to {path}")
 
     return str(file_path)
+
+def get_all_files(directory):
+    path = Path(directory)
+
+    if not path.exists() or not path.is_dir():
+        print("Invalid location.")
+        return []
+
+    valid_extensions = {'.tsx', '.ts', '.prisma'}
+    excluded_folders = {'node_modules', '.next'}
+    
+    return [
+        str(file) for file in path.rglob('*')
+        if file.is_file() and 
+           file.suffix in valid_extensions and 
+           not any(excluded_folder in file.parts for excluded_folder in excluded_folders)
+    ]
+
+def get_matching_files(files: List[str], search_input: str) -> List[str]:
+    """
+    Filters the list of files to return those that match or contain the search input.
+    """
+    return [file for file in files if search_input.lower() in file.lower()]

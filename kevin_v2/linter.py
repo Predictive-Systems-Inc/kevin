@@ -14,6 +14,7 @@ def lint_file(project_dir: str) -> str:
         stdout=subprocess.PIPE,
         text=True,
     )
+    # print(lint_result.stdout)
     return lint_result.stdout
 
 def get_errors(lint_output: str, file_path: str, chain: object) -> str:
@@ -37,14 +38,13 @@ def fix_errors(code: str, errors: str, chain: object) -> Tuple[str, str]:
             "question": f"Fix the errors/warnings: {errors} in the given code.",
         }
     )
+    # print(f"Fixed response: {fixed_response}")
     _, fixed_code = extract_filename_and_code(fixed_response)
-    return fixed_code, fixed_response
+    return fixed_code
 
 def lint_and_fix(
     chain: object,
     project_dir: str,
-    output_dir: str,
-    filename: str,
     code: str,
     file_path: str,
     max_attempts: int = 3,
@@ -60,13 +60,13 @@ def lint_and_fix(
       errors = get_errors(lint_output=lint_output, file_path=file_path, chain=chain)
       print(errors)
 
-      if errors == "No errors found.":
+      if errors == "No errors found." or errors == "I don't know.":
           print("No errors found. Skipping fix.")
           break
 
       print("Fixing errors...")
-      code, _ = fix_errors(code=code, errors=errors, chain=chain)
+      code = fix_errors(code=code, errors=errors, chain=chain)
       print("Updated code...")
-      write_code_to_file(output_dir=output_dir, filename=filename, code=code)
+      write_code_to_file(file_path=file_path, code=code)
     
     return code
