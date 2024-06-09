@@ -41,7 +41,7 @@ def create_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
 
     return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
 
-def commit_and_push_code(project_dir: str, message: str, llm: AzureChatOpenAI, user_prompts: List[str], generate_msg: bool = False) -> None:
+def commit_and_push_code(project_dir: str, message: str, llm: AzureChatOpenAI = None, user_prompts: List[str] = [], generate_msg: bool = False) -> None:
     """
     Commits and pushes the code in the project directory to GitHub.
     """

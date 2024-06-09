@@ -43,29 +43,31 @@ def display_options(options: List[str]) -> str:
         print(f"{idx}. {option}")
     return input("Enter choice: ")
 
-def generate_code(chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str]) -> None:
+def generate_code(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str]) -> None:
     """
     Handles user input, generates code, and provides options for linting and pushing to GitHub.
     """
-    filename, code = handle_user_input(chain, context_data['data'], "Enter prompt (type 'bye' to exit): ")
-    if not filename:
-        return
-    # print(f"Filename: {filename}\nCode: \n{code}")
-    file_path = write_code_to_file(file_path=str(Path(output_dir) / filename), code=code)
-    
     while True:
-        choice = display_options(["Lint the file and apply fixes", "Commit, and push to GitHub", "Back"])
-        if choice == '1':
-            result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
-            if result:
-                code = result
-        elif choice == '2':
-            commit_message = input("Enter commit message: ")
-            commit_and_push_code(project_dir=project_dir, message=commit_message)
-        elif choice == '3':
-            break
-        else:
-            print("Invalid choice. Please try again.")
+      filename, code = handle_user_input(chain, context_data['data'], "Enter prompt (type 'bye' to exit): ")
+      if not filename:
+          return
+      # print(f"Filename: {filename}\nCode: \n{code}")
+      file_path = write_code_to_file(file_path=str(Path(output_dir) / filename), code=code)
+      
+      while True:
+          choice = display_options(["Lint the file and apply fixes", "Commit, and push to GitHub", "Back"])
+          if choice == '1':
+              result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+              if result:
+                  code = result
+          elif choice == '2':
+              # commit_message = input("Enter commit message: ")
+              # commit_and_push_code(project_dir=project_dir, message=commit_message)
+              commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+          elif choice == '3':
+              break
+          else:
+              print("Invalid choice. Please try again.")
 
 def edit_existing_code(llm : AzureChatOpenAI, chain: object, project_dir: str) -> None:
     """
@@ -99,7 +101,6 @@ def edit_existing_code(llm : AzureChatOpenAI, chain: object, project_dir: str) -
         file_contents = file.read()
 
     while True:
-      print('HERE')
       _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to exit): ", "Modify the given code based on the following instructions: ")
       if not code:
           return
@@ -147,8 +148,8 @@ def main() -> None:
             output_dir = get_output_directory()
             if not output_dir:
                 continue
-            context_data = get_context_data(path="kevin_v2/templates/routes")
-            generate_code(chain, project_dir, output_dir, context_data)
+            context_data = get_context_data(path="templates/routes")
+            generate_code(llm, chain, project_dir, output_dir, context_data)
         elif choice == '2':
             project_dir = input('\nEnter project directory: ')
             edit_existing_code(llm, chain, project_dir)
