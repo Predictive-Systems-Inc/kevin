@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 from operator import itemgetter
 from pathlib import Path
 from typing import List, Tuple
@@ -113,8 +112,8 @@ def extract_filename_and_code(data: str) -> Tuple[str, str]:
     else:
         code = ''
 
-    print(f"Extracted filename: {filename}")
-    print(f"Extracted code: {code}")
+    # print(f"Extracted filename: {filename}")
+    # print(f"Extracted code: {code}")
     return filename, code
 
 def write_code_to_file(file_path: str, code: str) -> str:

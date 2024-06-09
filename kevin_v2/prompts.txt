@@ -1,0 +1,4 @@
+Develop an API route within a Next.js application to manage reimbursements. The API route must support all CRUD operations (POST, PATCH, DELETE, GET) for the reimbursement search table. Specifically, ensure that the GET method includes functionality for pagination, sorting, and filtering reimbursements based on various criteria.
+
+directory
+D:\Repositories\brad\apps\web\src\app\api\(case)\document

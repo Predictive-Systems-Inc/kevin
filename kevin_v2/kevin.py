@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
+from langchain_openai import AzureChatOpenAI
 from git import commit_and_push_code
 from linter import lint_and_fix
 from utils import (
@@ -19,6 +20,8 @@ from utils import (
 
 load_dotenv()
 
+user_inputs = []
+
 def handle_user_input(chain: object, context: str, input_prompt: str, extra_instructions: str = '') -> Tuple[Optional[str], Optional[str]]:
     """
     Handles user input and invokes the chain with the provided context and instructions.
@@ -26,6 +29,7 @@ def handle_user_input(chain: object, context: str, input_prompt: str, extra_inst
     user_input = input(input_prompt)
     if user_input.lower() == 'bye':
         return None, None
+    user_inputs.append(user_input)
     response = chain.invoke({"context": context, "question": extra_instructions + user_input})
     # print(response)
     return extract_filename_and_code(response)
@@ -63,13 +67,16 @@ def generate_code(chain: object, project_dir: str, output_dir: str, context_data
         else:
             print("Invalid choice. Please try again.")
 
-def edit_existing_code(chain: object, project_dir: str) -> None:
+def edit_existing_code(llm : AzureChatOpenAI, chain: object, project_dir: str) -> None:
     """
     Allows the user to edit existing code files by searching for and selecting a file,
     modifying its contents, and optionally committing the changes.
     """
     print('\nFetching files...')
     files = get_all_files(project_dir)
+    if not files:
+        print('No files found in the project directory. Please check the path and try again.')
+        return
     print('Files fetched.')
 
     search_input = input('\nSearch for a file to edit: ')
@@ -91,31 +98,34 @@ def edit_existing_code(chain: object, project_dir: str) -> None:
     with open(selected_file, 'r') as file:
         file_contents = file.read()
 
-    _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to exit): ", "Modify the given code based on the following instructions: ")
-    if not code:
-        return
-
-    result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=selected_file, max_attempts=1)
-    if result:
-        code = result
-        print('Writing code to file...')
-        write_code_to_file(file_path=selected_file, code=code)
-        print('Code written to file.')
-
-        while True:
-            choice = display_options(["Revert changes", "Commit, and push to GitHub", "Back"])
-            if choice == '1':
-                print('Reverting changes...')
-                with open(selected_file, 'w') as file:
-                    file.write(file_contents)
-                print('Changes reverted.')
-                break
-            elif choice == '2':
-                commit_message = input('\nEnter commit message: ')
-                commit_and_push_code(project_dir=project_dir, message=commit_message)
-                break
-            elif choice == '3':
-                break
+    while True:
+      print('HERE')
+      _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to exit): ", "Modify the given code based on the following instructions: ")
+      if not code:
+          return
+      result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=selected_file, max_attempts=1)
+      if result:
+          code = result
+          print('Writing code to file...')
+          write_code_to_file(file_path=selected_file, code=code)
+          print('Code written to file.')
+          while True:
+              choice = display_options(["Revert changes", "Commit, and push to GitHub", "Back"])
+              if choice == '1':
+                  print('Reverting changes...')
+                  with open(selected_file, 'w') as file:
+                      file.write(file_contents)
+                  print('Changes reverted.')
+                  break
+              elif choice == '2':
+                  # commit_message = input('\nEnter commit message: ')
+                  # commit_and_push_code(project_dir=project_dir, message=commit_message)
+                  commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+                  break
+              elif choice == '3':
+                  break
+              else:
+                    print("Invalid choice. Please try again.")
 
 def main() -> None:
     """
@@ -130,6 +140,7 @@ def main() -> None:
     chain = create_langchain(llm=llm, prompt=create_rag_prompt())
 
     while True:
+        user_inputs.clear()
         choice = display_options(["Generate code", "Edit existing code", "Exit"])
         if choice == '1':
             project_dir = "D:\\Repositories\\brad"
@@ -140,7 +151,7 @@ def main() -> None:
             generate_code(chain, project_dir, output_dir, context_data)
         elif choice == '2':
             project_dir = input('\nEnter project directory: ')
-            edit_existing_code(chain, project_dir)
+            edit_existing_code(llm, chain, project_dir)
         elif choice == '3':
             print('Goodbye!')
             break
