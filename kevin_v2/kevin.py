@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import platform
 from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
@@ -21,6 +22,12 @@ from utils import (
 load_dotenv()
 
 user_inputs = []
+
+def clear_console():
+    if platform.system() == "Windows":
+        os.system('cls')
+    else:
+        os.system('clear')
 
 def handle_user_input(chain: object, context: str, input_prompt: str, extra_instructions: str = '') -> Tuple[Optional[str], Optional[str]]:
     """
@@ -48,7 +55,7 @@ def generate_code(llm: AzureChatOpenAI, chain: object, project_dir: str, output_
     Handles user input, generates code, and provides options for linting and pushing to GitHub.
     """
     while True:
-      filename, code = handle_user_input(chain, context_data['data'], "Enter prompt (type 'bye' to exit): ")
+      filename, code = handle_user_input(chain, context_data['data'], "Enter prompt (type 'bye' to go back): ")
       if not filename:
           return
       # print(f"Filename: {filename}\nCode: \n{code}")
@@ -101,7 +108,7 @@ def edit_existing_code(llm : AzureChatOpenAI, chain: object, project_dir: str) -
         file_contents = file.read()
 
     while True:
-      _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to exit): ", "Modify the given code based on the following instructions: ")
+      _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
       if not code:
           return
       result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=selected_file, max_attempts=1)
@@ -141,6 +148,7 @@ def main() -> None:
     chain = create_langchain(llm=llm, prompt=create_rag_prompt())
 
     while True:
+        clear_console()
         user_inputs.clear()
         choice = display_options(["Generate code", "Edit existing code", "Exit"])
         if choice == '1':
@@ -156,6 +164,9 @@ def main() -> None:
         elif choice == '3':
             print('Goodbye!')
             break
+        else:
+            print('Invalid choice. Please try again.')
+        
 
 if __name__ == "__main__":
     main()
