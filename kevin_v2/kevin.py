@@ -148,7 +148,7 @@ def main() -> None:
     chain = create_langchain(llm=llm, prompt=create_rag_prompt())
 
     while True:
-        clear_console()
+        # clear_console()
         user_inputs.clear()
         choice = display_options(["Generate code", "Edit existing code", "Exit"])
         if choice == '1':
@@ -156,7 +156,7 @@ def main() -> None:
             output_dir = get_output_directory()
             if not output_dir:
                 continue
-            context_data = get_context_data(path="templates/routes")
+            context_data = get_context_data(path="./templates/routes")
             generate_code(llm, chain, project_dir, output_dir, context_data)
         elif choice == '2':
             project_dir = input('\nEnter project directory: ')
