@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import platform
@@ -39,6 +40,34 @@ def display_options(options: List[str]) -> str:
     for idx, option in enumerate(options, start=1):
         print(f"{idx}. {option}")
     return input("Enter choice: ")
+
+def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str], definition_file: str) -> None:
+    response = chain.invoke({"context": context_data['data'], "question": f"Generate code based on the following definition file: {definition_file}"})
+    filename, code =  extract_filename_and_code(response)
+    if not filename:
+        return
+    file_path = write_code_to_file(file_path=str(Path(output_dir) / filename), code=code)
+    result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+
+    if not result:
+        print('Failed to lint and fix code. Please try again.')
+        return
+    
+    while True:
+        choice = display_options(["Edit code", "Commit, and push to GitHub", "Back"])
+        if choice == '1':
+            _, code = handle_user_input(chain, result, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
+            if not code:
+                break
+            result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+            if not result:
+                print('Failed to lint and fix code. Please try again.')
+        elif choice == '2':
+            commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+        elif choice == '3':
+            break
+        else:
+            print("Invalid choice. Please try again.")
 
 def generate_code(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str]) -> None:
     while True:
@@ -158,10 +187,22 @@ def main() -> None:
                 context_data = get_context_data(path="./templates/table-ui")
                 generate_code(llm, chain, project_dir, output_dir, context_data)
         elif choice == '5':
-            output_dir = get_output_directory()
+            # Using prompts
+            # output_dir = get_output_directory()
+
+            # Using definition files
+            with open('./definition-files/forms/definition.json', 'r') as file:
+              data = json.load(file)
+            output_dir = data['output_dir']
+
             if output_dir:
                 context_data = get_context_data(path="./templates/forms")
-                generate_code(llm, chain, project_dir, output_dir, context_data)
+
+                # Using prompts
+                # generate_code(llm, chain, project_dir, output_dir, context_data)
+
+                # Using definition files
+                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, data)
         elif choice == '6':
             edit_existing_code(llm, chain, project_dir)
         elif choice == '7':
