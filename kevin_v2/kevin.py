@@ -52,10 +52,17 @@ def generate_code(llm: AzureChatOpenAI, chain: object, project_dir: str, output_
             continue
         
         while True:
-            choice = display_options(["Commit, and push to GitHub", "Back"])
+            choice = display_options(["Edit code", "Commit, and push to GitHub", "Back"])
             if choice == '1':
-                commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+                _, code = handle_user_input(chain, result, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
+                if not code:
+                    break
+                result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+                if not result:
+                    print('Failed to lint and fix code. Please try again.')
             elif choice == '2':
+                commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+            elif choice == '3':
                 break
             else:
                 print("Invalid choice. Please try again.")
@@ -124,7 +131,8 @@ def main() -> None:
             "Generate Prisma Schema", 
             "Generate API Route", 
             "Generate API Route with Filters", 
-            "Generate UI", 
+            "Generate Table UI", 
+            "Generate Form UI",
             "Edit existing code", 
             "Exit"
         ])
@@ -150,8 +158,13 @@ def main() -> None:
                 context_data = get_context_data(path="./templates/table-ui")
                 generate_code(llm, chain, project_dir, output_dir, context_data)
         elif choice == '5':
-            edit_existing_code(llm, chain, project_dir)
+            output_dir = get_output_directory()
+            if output_dir:
+                context_data = get_context_data(path="./templates/forms")
+                generate_code(llm, chain, project_dir, output_dir, context_data)
         elif choice == '6':
+            edit_existing_code(llm, chain, project_dir)
+        elif choice == '7':
             print('Goodbye!')
             break
         else:
