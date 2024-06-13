@@ -62,7 +62,9 @@ def lint_and_fix(
 
       if errors == "No errors found." or errors == "I don't know.":
           print("No errors found. Skipping fix.")
-          break
+          print("Updated code...")
+          write_code_to_file(file_path=file_path, code=code)
+          return code
 
       print("Fixing errors...")
       code = fix_errors(code=code, errors=errors, chain=chain)
