@@ -1,157 +1,215 @@
+import json
 import os
-import chainlit as cl
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
+from pathlib import Path
+import platform
+from typing import Dict, List, Optional, Tuple
 
-from code_gen import generate_code, generate_one_code, qa_generate_code
-from rqmts_graph import get_requirements_bot
-from probe_chain import ask_next_question
+from dotenv import load_dotenv
+from langchain_openai import AzureChatOpenAI
+from git import commit_and_push_code
+from linter import lint_and_fix
+from utils import (
+    create_langchain,
+    create_llm,
+    create_rag_prompt,
+    extract_filename_and_code,
+    get_all_files,
+    get_context_data,
+    get_matching_files,
+    get_output_directory,
+    write_code_to_file,
+)
 
-template = ChatPromptTemplate.from_messages([
-    ("user", "{content}"),
-])
+load_dotenv()
+user_inputs = []
 
-rqmt_bot = get_requirements_bot()
+def clear_console():
+    command = 'cls' if platform.system() == "Windows" else 'clear'
+    os.system(command)
 
+def handle_user_input(chain: object, context: str, input_prompt: str, extra_instructions: str = '') -> Tuple[Optional[str], Optional[str]]:
+    user_input = input(input_prompt)
+    if user_input.lower() == 'bye':
+        return None, None
+    user_inputs.append(user_input)
+    response = chain.invoke({"context": context, "question": extra_instructions + user_input})
+    return extract_filename_and_code(response)
 
-@cl.on_chat_start
-async def on_chat_start():
-    await cl.sleep(1)
+def display_options(options: List[str]) -> str:
+    print("\nOptions:")
+    for idx, option in enumerate(options, start=1):
+        print(f"{idx}. {option}")
+    return input("Enter choice: ")
 
-    # Set up the user session
-    initial_message = "What is the model entity you want to work with?"
-    cl.user_session.set("runnable", rqmt_bot)
-    cl.user_session.set(
-        "requirements",
-        {"model": "", "fields": [], "folder_location": "" },
+def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str], definition_file: str) -> None:
+    response = chain.invoke({"context": context_data['data'], "question": f"Generate code based on the following definition file: {definition_file}"})
+    filename, code =  extract_filename_and_code(response)
+    if not filename:
+        return
+    file_path = write_code_to_file(file_path=str(Path(output_dir) / filename), code=code)
+    result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+
+    if not result:
+        print('Failed to lint and fix code. Please try again.')
+        return
+    
+    while True:
+        choice = display_options(["Edit code", "Commit, and push to GitHub", "Back"])
+        if choice == '1':
+            _, code = handle_user_input(chain, result, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
+            if not code:
+                break
+            result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+            if not result:
+                print('Failed to lint and fix code. Please try again.')
+        elif choice == '2':
+            commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+        elif choice == '3':
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+def generate_code(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str]) -> None:
+    while True:
+        filename, code = handle_user_input(chain, context_data['data'], "Enter prompt (type 'bye' to go back): ")
+        if not filename:
+            return
+        file_path = write_code_to_file(file_path=str(Path(output_dir) / filename), code=code)
+        result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+        if not result:
+            print('Failed to lint and fix code. Please try again.')
+            continue
+        
+        while True:
+            choice = display_options(["Edit code", "Commit, and push to GitHub", "Back"])
+            if choice == '1':
+                _, code = handle_user_input(chain, result, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
+                if not code:
+                    break
+                result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
+                if not result:
+                    print('Failed to lint and fix code. Please try again.')
+            elif choice == '2':
+                commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+            elif choice == '3':
+                break
+            else:
+                print("Invalid choice. Please try again.")
+
+def edit_existing_code(llm: AzureChatOpenAI, chain: object, project_dir: str) -> None:
+    print(f'\nFetching files from {project_dir}...')
+    files = get_all_files(project_dir)
+    if not files:
+        print('No files found in the project directory. Please check the path and try again.')
+        return
+    print('Files fetched.')
+
+    search_input = input('\nSearch for a file to edit: ')
+    matching_files = get_matching_files(files, search_input)
+    if not matching_files:
+        print('No files found matching the search input.')
+        return
+
+    print('\nMatching files:')
+    for i, file in enumerate(matching_files):
+        print(f"{i + 1}. {file}")
+
+    selected_file_index = input('\nSelect a file to edit: ')
+    if not selected_file_index.isdigit() or int(selected_file_index) < 1 or int(selected_file_index) > len(matching_files):
+        print('Invalid file index.')
+        return
+
+    selected_file = matching_files[int(selected_file_index) - 1]
+    with open(selected_file, 'r') as file:
+        file_contents = file.read()
+
+    while True:
+        _, code = handle_user_input(chain, file_contents, "Enter prompt (type 'bye' to go back): ", "Modify the given code based on the following instructions: ")
+        if not code:
+            return
+        result = lint_and_fix(chain=chain, project_dir=project_dir, code=code, file_path=selected_file, max_attempts=1)
+        if not result:
+            print('Failed to lint and fix code. Please try again.')
+
+        while True:
+            choice = display_options(["Revert changes", "Commit, and push to GitHub", "Back"])
+            if choice == '1':
+                print('Reverting changes...')
+                with open(selected_file, 'w') as file:
+                    file.write(file_contents)
+                print('Changes reverted.')
+            elif choice == '2':
+                commit_and_push_code(project_dir=project_dir, message='', llm=llm, user_prompts=user_inputs, generate_msg=True)
+            elif choice == '3':
+                break
+            else:
+                print("Invalid choice. Please try again.")
+
+def main() -> None:
+    llm = create_llm(
+        model="gpt-4o",
+        api_version="2024-05-01-preview",
+        azure_endpoint=f"{os.getenv('API_ENDPOINT')}openai/deployments/gpt-4o/chat/completions?api-version={os.getenv('API_VERSION')}",
     )
-    cl.user_session.set(
-        "message_history",
-        [initial_message]
-    )
-    msg = cl.Message(content="""
-                     Hi! I'm Kevin 🤖, your programming assistant 💻. I can help build CRUD pages.
-                     What is the model entity you want to work with?
-                     """)
-    await msg.send()
+    chain = create_langchain(llm=llm, prompt=create_rag_prompt())
+    project_dir = os.getenv('LINT_DIRECTORY')
 
-@cl.on_message
-async def on_message(message: cl.Message):
-    # Initiate the context variables with user_session variables
-    requirements = cl.user_session.get("requirements")
-    message_history = cl.user_session.get("message_history")
-    # print("Input message:\n", input_message.content)
-
-    # # append message to message_history
-    message_history.append(message.content)
-
-    # # Pass the requirements object to the bot when it is invoked
-    # # send the last conversation message to the bot
-    print('')
-    print('')
-    print('******** LAST TWO MESSAGES FOR PROMPTING **********')    
-    print(message_history[-2:])
-    async with cl.Step(name="Kevin as Systems Analyst") as parent_step:
-        parent_step.input = "Analyzing answer..."        
-        response = rqmt_bot.invoke(
-            {"messages": message_history[-2:],
-            "requirements": requirements},
-        )
-        parent_step.output = f"{message.content} is noted." # response.get("messages")[-1]
-
-        # Update requirements in the session
-        new_requirements = response.get("requirements")
-        cl.user_session.set("requirements", new_requirements)
+    while True:
+        user_inputs.clear()
+        choice = display_options([
+            "Generate Prisma Schema", 
+            "Generate API Route", 
+            "Generate API Route with Filters", 
+            "Generate Table UI", 
+            "Generate Form UI",
+            "Edit existing code", 
+            "Exit"
+        ])
         
-        print('******** REQUIREMENTS **********')
-        print(requirements)
-        # if requirements is Complete, ask the user to generate  the code
-        if len(requirements['model']) > 0 and \
-          len(requirements['fields']) > 0 and \
-          len(requirements['folder_location']) > 0:
-          files = await next_phase(new_requirements)
-          await confirm_qa(files)
-          return
-        
-    async with cl.Step(name="Kevin is probing...") as child_step:
-        # # let's probe the user for the next question
-        child_step.input = "Probing next question..."
-        probe = ask_next_question(new_requirements, message_history)
-        message_history.append(probe)
-        child_step.output = probe
+        if choice == '1':
+            output_dir = get_output_directory()
+            if output_dir:
+                context_data = get_context_data(path="./templates/prisma-schemas")
+                generate_code(llm, chain, project_dir, output_dir, context_data)
+        elif choice == '2':
+            output_dir = get_output_directory()
+            if output_dir:
+                context_data = get_context_data(path="./templates/route")
+                generate_code(llm, chain, project_dir, output_dir, context_data)
+        elif choice == '3':
+            output_dir = get_output_directory()
+            if output_dir:
+                context_data = get_context_data(path="./templates/route-filters")
+                generate_code(llm, chain, project_dir, output_dir, context_data)
+        elif choice == '4':
+            output_dir = get_output_directory()
+            if output_dir:
+                context_data = get_context_data(path="./templates/table-ui")
+                generate_code(llm, chain, project_dir, output_dir, context_data)
+        elif choice == '5':
+            # Using prompts
+            # output_dir = get_output_directory()
 
-        # Send the probe to the user
-        await cl.Message(content=probe).send()
+            # Using definition files
+            with open('./definition-files/forms/definition.json', 'r') as file:
+              data = json.load(file)
+            output_dir = data['output_dir']
 
-    
-async def next_phase(requirements):
-    message = f"""Your requirements are complete. Do you want to generate the code?
-    
-    Model: {requirements['model']}
-    Fields: {requirements['fields']}
-    Folder Location: {requirements['folder_location']}"""
+            if output_dir:
+                context_data = get_context_data(path="./templates/forms")
 
-    res = await cl.AskActionMessage(
-        content=message,
-        actions=[
-            cl.Action(name="continue", value="continue", label="✅ Yes!"),
-            cl.Action(name="cancel", value="cancel", label="❌ No"),
-        ],
-    ).send()
+                # Using prompts
+                # generate_code(llm, chain, project_dir, output_dir, context_data)
 
-    if res and res.get("value") == "continue":
-        await cl.Message(
-            content="Yes, now let's get to work. Generating code... 🚀",
-        ).send()
+                # Using definition files
+                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, data)
+        elif choice == '6':
+            edit_existing_code(llm, chain, project_dir)
+        elif choice == '7':
+            print('Goodbye!')
+            break
+        else:
+            print('Invalid choice. Please try again.')
 
-        # # let's probe the user for the next question
-        # for root, dirs, files in os.walk("templates/app/(protected)/cases"):
-        #     for file in files:
-        #         await cl.Message("").send()
-        #         output_file = generate_one_code(requirements, os.path.join(root, file))
-        #         # with open(os.path.join(root, file), "r") as f:
-        #         #     templates[os.path.join(root, file)] = f.read()
-        #         await cl.Message(f"Code generation successful for {output_file[0]}").send()
-
-        await cl.Message("").send()
-        
-        files = generate_code(requirements)
-
-        msg = cl.Message(content=f"""Code generation complete. 
-                         The following files have been created. 
-                         
-                         {files}
-                         
-                         Thank you! 🎉""")
-        await msg.send()
-
-        return files
-    
-async def confirm_qa(files):
-    message = f"""Would you like to check the code for syntax errors?"""
-
-    res = await cl.AskActionMessage(
-        content=message,
-        actions=[
-            cl.Action(name="continue", value="continue", label="✅ Yes!"),
-            cl.Action(name="cancel", value="cancel", label="❌ No"),
-        ],
-    ).send()
-
-    if res and res.get("value") == "continue":
-        await cl.Message(
-            content="Okay. Hang on, I'm running lint checks on the files... 🚀",
-        ).send()
-
-        await cl.Message("").send()
-        files = qa_generate_code(files)
-
-        msg = cl.Message(content=f"""QA cleanup has been completed. 
-                         
-                         {files}
-                         
-                         Thank you! 🎉""")
-        await msg.send()
-
-        return files
-
+if __name__ == "__main__":
+    main()
