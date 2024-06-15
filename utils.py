@@ -2,7 +2,7 @@ import os
 import re
 from operator import itemgetter
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -19,51 +19,36 @@ def create_llm(model: str, api_version: str, azure_endpoint: str) -> AzureChatOp
         azure_endpoint=azure_endpoint
     )
 
-def create_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
+def get_context_data(paths: List[str]) -> Dict[str, str]:
     """
-    Creates a ChatPromptTemplate for the RAG (Retrieval-Augmented Generation) assistant.
+    Reads the content of the specified files or all files in the specified directories
+    and returns their content as a dictionary.
+
+    :param paths: List of file or directory paths.
+    :return: A dictionary with the combined content of all specified files.
     """
-    RAG_PROMPT = """
-    CONTEXT:
-    {context}
-
-    QUERY:
-    {question}
-
-    You are a helpful assistant knowledgeable in NextJS and Prisma. Use the available context to answer the question.
-
-    If the task requires generating code, respond immediately in the following format:
-    Filename: [inster actual filename here, file name and extension only, always exclude path and unnecessary symbols, strictly e.g. index.tsx or index.ts or schema.prisma]
-    Code: [insert actual code here]
-
-    If the task requires modifying a specific file, respond immediately in the following format:
-    Code: [insert actual code here]
-
-    If the task requires fixing a given code based on a given list of errors, respond immediately in the following format:
-    Code: [insert actual code here]
-
-    If the task requires getting the lint warnings/errors for a specific file in a given set of errors/warnings, respond immediately in the following format:
-    Errors: [insert actual errors here]
-    However, if there are no errors, respond with "No errors found."
-    """
-
-    return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
-
-def get_context_data(path: str) -> dict[str, str]:
-    """
-    Reads all files in the specified directory and returns their content as a dictionary.
-    """
-    directory_path = Path(path)
-
-    if not directory_path.exists() or not directory_path.is_dir():
-        raise ValueError(f"Invalid directory: {directory_path}")
-
     data = {'data': ''}
 
-    for file_path in directory_path.glob('*'):
-        content = file_path.read_text()
-        print(f"Reading file: {file_path}")
-        data['data'] += (f"Example for {file_path.stem.upper()}:\n{content}\n")
+    for path in paths:
+        path_obj = Path(path)
+
+        if not path_obj.exists():
+            raise ValueError(f"Invalid path: {path_obj}")
+
+        if path_obj.is_dir():
+            # If the path is a directory, read all files in the directory
+            for file_path in path_obj.glob('*'):
+                if file_path.is_file():
+                    content = file_path.read_text()
+                    print(f"Reading file: {file_path}")
+                    data['data'] += f"Example for {file_path.stem.upper()}:\n{content}\n"
+        elif path_obj.is_file():
+            # If the path is a file, read just that file
+            content = path_obj.read_text()
+            print(f"Reading file: {path_obj}")
+            data['data'] += f"Example for {path_obj.stem.upper()}:\n{content}\n"
+        else:
+            raise ValueError(f"Path is neither a file nor a directory: {path_obj}")
 
     return data
 
@@ -91,21 +76,13 @@ def get_output_directory() -> str:
         else:
             return output_dir
 
-def extract_filename_and_code(data: str) -> Tuple[str, str]:
+def extract_code(data: str) -> Tuple[str, str]:
     """
-    Extracts the filename and code from the provided data.
-    Cleans the filename by removing special characters except for the dot.
+    Extracts the code from the provided data.
     """
-    filename_pattern = re.compile(r"Filename:\s*(.+)")
-    code_pattern = re.compile(r"Code:\s*```(?:[a-z]*)\n([\s\S]*?)```", re.MULTILINE)
+    code_pattern = re.compile(r"```(?:[a-z]*)\n([\s\S]*?)```", re.MULTILINE)
 
-    filename_match = filename_pattern.search(data)
     code_match = code_pattern.search(data)
-
-    if filename_match:
-        filename = re.sub(r'[^a-zA-Z0-9\.-]', '', filename_match.group(1)).strip()
-    else:
-        filename = 'unknown_filename'
 
     if code_match:
         code = code_match.group(1).strip()
@@ -114,12 +91,14 @@ def extract_filename_and_code(data: str) -> Tuple[str, str]:
 
     # print(f"Extracted filename: {filename}")
     # print(f"Extracted code: {code}")
-    return filename, code
+    return code
 
 def write_code_to_file(file_path: str, code: str) -> str:
     """
     Writes the provided code to the specified file path, overwriting it if it exists.
     """
+    # print(file_path)
+    # print(code)
     if not file_path or not code:
         raise ValueError("File path or code not provided")
 
@@ -130,7 +109,14 @@ def write_code_to_file(file_path: str, code: str) -> str:
 
     return str(file_path)
 
-def get_all_files(directory):
+def get_all_files(directory: str) -> List[str]:
+    """
+    Retrieves all files from the specified directory and its subdirectories,
+    excluding certain folders and files based on their extensions.
+    
+    :param directory: The directory to search for files.
+    :return: A list of file paths as strings.
+    """
     path = Path(directory)
 
     if not path.exists() or not path.is_dir():
@@ -138,13 +124,15 @@ def get_all_files(directory):
         return []
 
     valid_extensions = {'.tsx', '.ts', '.prisma'}
-    excluded_folders = {'node_modules', '.next'}
+    excluded_folders = {'node_modules', 'zod', 'generated'}
     
     return [
         str(file) for file in path.rglob('*')
         if file.is_file() and 
            file.suffix in valid_extensions and 
-           not any(excluded_folder in file.parts for excluded_folder in excluded_folders)
+           not file.name.startswith('.') and
+           not any(excluded_folder in file.parts for excluded_folder in excluded_folders) and
+           not any(part.startswith('.') for part in file.parts if part != file.name)
     ]
 
 def get_matching_files(files: List[str], search_input: str) -> List[str]:
@@ -152,3 +140,51 @@ def get_matching_files(files: List[str], search_input: str) -> List[str]:
     Filters the list of files to return those that match or contain the search input.
     """
     return [file for file in files if search_input.lower() in file.lower()]
+
+def list_all_subdirectories_and_files(path: str):
+    """
+    Lists all subdirectories and files of the specified path, excluding 'node_modules'
+    and any directories starting with a dot.
+    """
+    if not os.path.exists(path) or not os.path.isdir(path):
+        raise ValueError(f"Invalid path: {path}")
+    invalid_dirs = ['node_modules', 'ui', 'generated', 'zod', 'config-eslint', 'config-typescript']
+    structure = {}
+    for root, dirs, files in os.walk(path):
+        # Filter out directories to skip
+        dirs[:] = [d for d in dirs if not (d in invalid_dirs or d.startswith('.'))]
+        
+        # Add files to the structure
+        rel_root = os.path.relpath(root, path)
+        if rel_root == '.':
+            rel_root = ''
+        structure[rel_root] = {
+            'subdirs': dirs,
+            'files': files
+        }
+    return structure
+
+def combine_structure_to_string(structure: Dict[str, Dict[str, List[str]]]) -> str:
+    """
+    Combines the directory structure into a single string.
+    """
+    result = []
+    for dir_path, contents in structure.items():
+        result.append(f"Directory: {dir_path}")
+        if contents['subdirs']:
+            result.append(f"  Subdirectories: {', '.join(contents['subdirs'])}")
+        if contents['files']:
+            result.append(f"  Files: {', '.join(contents['files'])}")
+    
+    return "\n".join(result)
+
+def append_to_path(base_path, paths: List[str]):
+    """
+    Appends subdirectories or filenames to the base path in a cross-platform way.
+
+    :param base_path: The base directory path as a string or Path object.
+    :param paths: A list of additional path components to append to the base path.
+    :return: The combined path as a Path object.
+    """
+    base_path = Path(base_path)
+    return base_path.joinpath(*paths)
