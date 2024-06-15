@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 from operator import itemgetter
 from pathlib import Path
@@ -188,3 +189,13 @@ def append_to_path(base_path, paths: List[str]):
     """
     base_path = Path(base_path)
     return base_path.joinpath(*paths)
+
+def clear_console():
+    command = 'cls' if platform.system() == "Windows" else 'clear'
+    os.system(command)
+
+def display_options(options: List[str]) -> str:
+    print("\nOptions:")
+    for idx, option in enumerate(options, start=1):
+        print(f"{idx}. {option}")
+    return input("Enter choice: ")

@@ -1,8 +1,7 @@
 import json
 import os
 from pathlib import Path
-import platform
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
@@ -20,6 +19,7 @@ from utils import (
     combine_structure_to_string,
     create_langchain,
     create_llm,
+    display_options,
     extract_code,
     get_all_files,
     get_context_data,
@@ -32,9 +32,6 @@ from utils import (
 load_dotenv()
 user_inputs = []
 
-def clear_console():
-    command = 'cls' if platform.system() == "Windows" else 'clear'
-    os.system(command)
 
 def handle_user_input(llm: AzureChatOpenAI, context: str, input_prompt: str) -> Tuple[Optional[str], Optional[str]]:
     user_input = input(input_prompt)
@@ -42,14 +39,9 @@ def handle_user_input(llm: AzureChatOpenAI, context: str, input_prompt: str) -> 
         return None, None
     user_inputs.append(user_input)
     chain = create_langchain(llm=llm, prompt=create_editing_rag_prompt())
+    print('Kevin is processing your request...  🤖\n')
     response = chain.invoke({"context": context, "question": "Modify the given code based on the following instructions: " + user_input})
     return extract_code(response)
-
-def display_options(options: List[str]) -> str:
-    print("\nOptions:")
-    for idx, option in enumerate(options, start=1):
-        print(f"{idx}. {option}")
-    return input("Enter choice: ")
 
 def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str], definition_file: str) -> None:
     response = chain.invoke({"context": context_data['data'], "question": f"Generate code based on the following definition file: {definition_file}"})
@@ -68,7 +60,6 @@ def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, pro
         choice = display_options(["Edit code", "Commit, and push to GitHub", "Back"])
         if choice == '1':
             code = handle_user_input(llm, result, "Enter edit prompt (type 'bye' to go back): ")
-            print('Kevin is processing your request...  🤖\n')
             if not code:
                 print('Kevin returned a malformed response. Please try again.')
                 break
@@ -82,7 +73,7 @@ def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, pro
         else:
             print("Invalid choice. Please try again.")
 
-def edit_existing_code(llm: AzureChatOpenAI, chain: object, project_dir: str) -> None:
+def edit_existing_code(llm: AzureChatOpenAI, project_dir: str) -> None:
     print(f'\nFetching files from {project_dir}...')
     files = get_all_files(project_dir)
     # print(files)
@@ -114,7 +105,6 @@ def edit_existing_code(llm: AzureChatOpenAI, chain: object, project_dir: str) ->
     # print(file_contents)
     while True:
         code = handle_user_input(llm, file_contents, "Enter edit prompt (type 'bye' to go back): ")
-        print('Kevin is processing your request...  🤖\n')
         if not code:
             return
         result = lint_and_fix(llm=llm, project_dir=project_dir, code=code, file_path=selected_file, max_attempts=1)
@@ -195,7 +185,9 @@ def main() -> None:
             with open('./definition-file.json', 'r') as file:
               definition_file = json.load(file)
             directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
-            response = directory_chain.invoke({"context": combine_structure_to_string(directories_and_files), "question": f"Choose the directory to save {definition_file["file_name"]}."})
+            response = directory_chain.invoke(
+                {"context": combine_structure_to_string(directories_and_files), 
+                "question": f"Choose the directory to save {definition_file["file_name"]}."})
             output_dir = append_to_path(project_dir, [response.split(' ')[1]])
 
             if output_dir:
@@ -204,7 +196,7 @@ def main() -> None:
                 print('\nKevin is generating the code...  🤖\n')
                 generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
         elif choice == '6':
-            edit_existing_code(llm, chain, project_dir)
+            edit_existing_code(llm, project_dir)
         elif choice == '7':
             print('Goodbye!')
             break
