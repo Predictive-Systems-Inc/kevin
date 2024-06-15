@@ -1,31 +1,4 @@
 {
-  "file_name": "generated_schema.prisma",
-  "model_name": "CaseLocation",
-  "fields": [
-    {
-      "name": "location",
-      "type": "string",
-      "required": true
-    },
-    {
-      "name": "case",
-      "type": "case",
-      "required": true
-    },
-    {
-      "name": "createdAt",
-      "type": "DateTime",
-      "required": true
-    },
-    {
-      "name": "updatedAt",
-      "type": "DateTime",
-      "required": true
-    },
-    {
-      "name": "deletedAt",
-      "type": "DateTime",
-      "required": false
-    }
-  ]
+  "file_name": "route.ts",
+  "model_name": "Tags"
 }

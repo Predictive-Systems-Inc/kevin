@@ -64,3 +64,12 @@ Kevin is an enterprise AI pair programmer because enterprise apps follows standa
   ]
 }
 ```
+
+3. Generate API Route
+
+```json
+{
+  "file_name": "route.ts",
+  "model_name": "Tags"
+}
+```

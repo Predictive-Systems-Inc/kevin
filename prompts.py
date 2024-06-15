@@ -128,6 +128,24 @@ def create_form_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
 
     return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
 
+def create_route_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
+    """
+    Creates a ChatPromptTemplate for the RAG (Retrieval-Augmented Generation) assistant.
+    """
+    RAG_PROMPT = """
+    CONTEXT:
+    {context}
+
+    QUERY:
+    {question}
+
+    You are a helpful assistant knowledgeable in creating API routes in NextJS. Use the available context to answer the question.
+
+    Strictly respond with actual raw code only. No other text is needed.
+    """
+
+    return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
+
 def create_editing_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
     """
     Creates a ChatPromptTemplate for the RAG (Retrieval-Augmented Generation) assistant.

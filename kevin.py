@@ -13,6 +13,7 @@ from prompts import (
     create_editing_rag_prompt, 
     create_form_rag_prompt, 
     create_prisma_rag_prompt,
+    create_route_rag_prompt,
     )
 from utils import (
     append_to_path,
@@ -167,10 +168,19 @@ def main() -> None:
                 print('\nKevin is generating the code...  🤖\n')
                 generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
         elif choice == '2':
-            output_dir = get_output_directory()
+            with open('./definition-file.json', 'r') as file:
+              definition_file = json.load(file)
+            directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
+            response = directory_chain.invoke(
+                {"context": combine_structure_to_string(directories_and_files), 
+                 "question": f"Choose the directory to save {definition_file["file_name"]} for the model {definition_file["model_name"]}."})
+            output_dir = append_to_path(project_dir, [response.split(' ')[1]])
+
             if output_dir:
-                context_data = get_context_data(path="./templates/route")
-                # generate_code(llm, chain, project_dir, output_dir, context_data)
+                context_data = get_context_data(paths=["./templates/route", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
+                chain = create_langchain(llm=llm, prompt=create_route_rag_prompt())
+                print('\nKevin is generating the code...  🤖\n')
+                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
         elif choice == '3':
             output_dir = get_output_directory()
             if output_dir:
