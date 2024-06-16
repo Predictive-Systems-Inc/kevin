@@ -105,3 +105,38 @@ Kevin is an enterprise AI pair programmer because enterprise apps follows standa
   ]
 }
 ```
+
+5. Generate API Route with Filters
+
+```json
+{
+  "file_name": "route.ts",
+  "model_name": "Tags",
+  "filters": [
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "case",
+      "type": "Case",
+      "use_array_condition_builder": true,
+      "sub_fields": [
+        {
+          "name": "title"
+        }
+      ]
+    },
+    {
+      "name": "action",
+      "type": "Action",
+      "use_array_condition_builder": true,
+      "sub_fields": [
+        {
+          "name": "title"
+        }
+      ]
+    }
+  ]
+}
+```

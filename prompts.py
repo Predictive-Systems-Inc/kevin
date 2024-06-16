@@ -146,6 +146,26 @@ def create_route_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
 
     return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
 
+def create_route_filters_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
+    """
+    Creates a ChatPromptTemplate for the RAG (Retrieval-Augmented Generation) assistant.
+    """
+    RAG_PROMPT = """
+    CONTEXT:
+    {context}
+
+    QUERY:
+    {question}
+
+    You are a helpful assistant knowledgeable in creating API routes with specific filters used for fetching data in NextJS. Use the available context to answer the question.
+    
+    Make sure that aside from the GET method, the methods POST, PATCH, and DELETE are also included in the response.
+
+    Strictly respond with actual raw code only. No other text is needed.
+    """
+
+    return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
+
 def create_table_ui_rag_prompt(instructions: str = '') -> ChatPromptTemplate:
     """
     Creates a ChatPromptTemplate for the RAG (Retrieval-Augmented Generation) assistant.
