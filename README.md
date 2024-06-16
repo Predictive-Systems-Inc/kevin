@@ -1,8 +1,36 @@
 # Kevin
 
-Kevin is an enterprise AI pair programmer because enterprise apps follows standard architecture, coding patterns. Kevin can automatically create code based on boilerplate templates.
+Kevin is an enterprise AI pair programmer designed to streamline the development of enterprise applications by leveraging standard architectures and coding patterns. Kevin can automatically generate code based on boilerplate templates, significantly reducing development time and effort.
 
-## Definition files
+## How to Run
+
+1. **Ensure Dependencies are Installed**:
+   Make sure you have `Python` and all required dependencies installed by running `pip install -r requirements.txt`.
+
+2. **Prepare Definition Files**:
+   Create or modify your definition files `definition-file.json` according to the examples provided.
+
+3. **Execute Kevin**:
+   Run the Kevin using `python kevin.py`.
+
+4. **Review Generated Code**:
+   After execution, review the generated code files in the specified output directory shown in the terminal to ensure they meet your requirements.
+
+## Tips
+
+- **Correct Definition File:** Ensure you are using the correct type of definition file.
+- **File Name Importance:** The `file_name` specified in the definition file is crucial as Kevin uses it to choose the output directory.
+- **Definition File Format:** There is no specific format for the definition file, but always specify the `file_name` and, when necessary, the `model`.
+
+## Handling Inaccurate Results
+
+If Kevin generates inaccurate results, follow these steps:
+
+1. **Modify System Prompt:** Adjust the appropriate system prompt in `prompts.py`.
+2. **Provide More Context:** Enhance context by modifying relevant files under `./templates`.
+3. **Refine Definition File:** Add more relevant and specific data in `definition-file.json`.
+
+## Example Definition files
 
 1. Generate Prisma schema
 
