@@ -15,7 +15,7 @@ from prompts import (
     create_route_filters_rag_prompt,
     create_route_rag_prompt,
     create_table_ui_rag_prompt,
-    )
+)
 from utils import (
     append_to_path,
     combine_structure_to_string,
@@ -26,7 +26,6 @@ from utils import (
     get_all_files,
     get_context_data,
     get_matching_files,
-    get_output_directory,
     list_all_subdirectories_and_files,
     write_code_to_file,
 )
@@ -34,22 +33,19 @@ from utils import (
 load_dotenv()
 user_inputs = []
 
-
 def handle_user_input(llm: AzureChatOpenAI, context: str, input_prompt: str) -> Tuple[Optional[str], Optional[str]]:
     user_input = input(input_prompt)
     if user_input.lower() == 'bye':
         return None, None
     user_inputs.append(user_input)
     chain = create_langchain(llm=llm, prompt=create_editing_rag_prompt())
-    print('Kevin is processing your request...  🤖\n')
+    print('Kevin is processing your request... 🤖\n')
     response = chain.invoke({"context": context, "question": "Modify the given code based on the following instructions: " + user_input})
     return extract_code(response)
 
-def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str], definition_file: str) -> None:
+def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, project_dir: str, output_dir: str, context_data: Dict[str, str], definition_file: Dict) -> None:
     response = chain.invoke({"context": context_data['data'], "question": f"Generate code based on the following definition file: {definition_file}"})
-    # print(response)
-    
-    code =  extract_code(response)
+    code = extract_code(response)
     file_path = write_code_to_file(file_path=str(Path(output_dir) / definition_file['file_name']), code=code)
     result = lint_and_fix(llm=llm, project_dir=project_dir, code=code, file_path=file_path, max_attempts=1)
 
@@ -78,7 +74,7 @@ def generate_code_using_definition_file(llm: AzureChatOpenAI, chain: object, pro
 def edit_existing_code(llm: AzureChatOpenAI, project_dir: str) -> None:
     print(f'\nFetching files from {project_dir}...')
     files = get_all_files(project_dir)
-    # print(files)
+    
     if not files:
         print('No files found in the project directory. Please check the path and try again.')
         return
@@ -104,7 +100,6 @@ def edit_existing_code(llm: AzureChatOpenAI, project_dir: str) -> None:
     with open(selected_file, 'r') as file:
         file_contents = file.read()
 
-    # print(file_contents)
     while True:
         code = handle_user_input(llm, file_contents, "Enter edit prompt (type 'bye' to go back): ")
         if not code:
@@ -126,6 +121,21 @@ def edit_existing_code(llm: AzureChatOpenAI, project_dir: str) -> None:
                 break
             else:
                 print("Invalid choice. Please try again.")
+
+def load_definition_file(file_path: str = './definition-file.json') -> Dict:
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def get_output_directory(llm: AzureChatOpenAI, project_dir: str, directories_and_files: Dict, definition_file: Dict, include_model: bool = False) -> Optional[str]:
+    directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
+    if include_model:
+        question = f"Choose the directory to save {definition_file['file_name']} for the model {definition_file['model_name']}."
+    else:
+        question = f"Choose the directory to save {definition_file['file_name']}."
+    response = directory_chain.invoke(
+        {"context": combine_structure_to_string(directories_and_files), 
+         "question": question})
+    return append_to_path(project_dir, [response.split(' ')[1]])
 
 def main() -> None:
     llm = create_llm(
@@ -149,71 +159,33 @@ def main() -> None:
             "Exit"
         ])
         
-        if choice == '1':
-            with open('./definition-file.json', 'r') as file:
-              definition_file = json.load(file)
+        if choice in ('1', '2', '3', '4', '5'):
+            definition_file = load_definition_file()
+            template_subpath = {
+                '1': 'prisma-schemas',
+                '2': 'route',
+                '3': 'route-filters',
+                '4': 'table-ui',
+                '5': 'forms'
+            }[choice]
 
-            output_dir = append_to_path(project_dir, ['packages', 'db-prisma'])
-            if output_dir:
-                context_data = get_context_data(paths=["./templates/prisma-schemas", append_to_path(output_dir, ['schema.prisma'])])
-                chain = create_langchain(llm=llm, prompt=create_prisma_rag_prompt())
-                print('\nKevin is generating the code...  🤖\n')
-                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
-        elif choice == '2':
-            with open('./definition-file.json', 'r') as file:
-              definition_file = json.load(file)
-            directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
-            response = directory_chain.invoke(
-                {"context": combine_structure_to_string(directories_and_files), 
-                 "question": f"Choose the directory to save {definition_file["file_name"]} for the model {definition_file["model_name"]}."})
-            output_dir = append_to_path(project_dir, [response.split(' ')[1]])
+            if choice in ('1', '2', '3'):
+                output_dir = get_output_directory(llm, project_dir, directories_and_files, definition_file, True)
+            else:
+                output_dir = get_output_directory(llm, project_dir, directories_and_files, definition_file)
+            print(f"Output directory: {output_dir}")
 
             if output_dir:
-                context_data = get_context_data(paths=["./templates/route", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
-                chain = create_langchain(llm=llm, prompt=create_route_rag_prompt())
-                print('\nKevin is generating the code...  🤖\n')
-                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
-        elif choice == '3':
-            with open('./definition-file.json', 'r') as file:
-              definition_file = json.load(file)
-            directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
-            response = directory_chain.invoke(
-                {"context": combine_structure_to_string(directories_and_files), 
-                "question": f"Choose the directory to save {definition_file["file_name"]}."})
-            output_dir = append_to_path(project_dir, [response.split(' ')[1]])
-            
-            if output_dir:
-                context_data = get_context_data(paths=["./templates/route-filters", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
-                chain = create_langchain(llm=llm, prompt=create_route_filters_rag_prompt())
-                print('\nKevin is generating the code...  🤖\n')
-                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
-        elif choice == '4':
-            with open('./definition-file.json', 'r') as file:
-              definition_file = json.load(file)
-            directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
-            response = directory_chain.invoke(
-                {"context": combine_structure_to_string(directories_and_files), 
-                "question": f"Choose the directory to save {definition_file["file_name"]}."})
-            output_dir = append_to_path(project_dir, [response.split(' ')[1]])
-            
-            if output_dir:
-                context_data = get_context_data(paths=["./templates/table-ui", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
-                chain = create_langchain(llm=llm, prompt=create_table_ui_rag_prompt())
-                print('\nKevin is generating the code...  🤖\n')
-                generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
-        elif choice == '5':
-            with open('./definition-file.json', 'r') as file:
-              definition_file = json.load(file)
-            directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
-            response = directory_chain.invoke(
-                {"context": combine_structure_to_string(directories_and_files), 
-                "question": f"Choose the directory to save {definition_file["file_name"]}."})
-            output_dir = append_to_path(project_dir, [response.split(' ')[1]])
-
-            if output_dir:
-                context_data = get_context_data(paths=["./templates/forms", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
-                chain = create_langchain(llm=llm, prompt=create_form_rag_prompt())
-                print('\nKevin is generating the code...  🤖\n')
+                context_data = get_context_data(paths=[f"./templates/{template_subpath}", append_to_path(project_dir, ['packages', 'db-prisma', 'schema.prisma'])])
+                prompt_function = {
+                    '1': create_prisma_rag_prompt,
+                    '2': create_route_rag_prompt,
+                    '3': create_route_filters_rag_prompt,
+                    '4': create_table_ui_rag_prompt,
+                    '5': create_form_rag_prompt
+                }[choice]
+                chain = create_langchain(llm=llm, prompt=prompt_function())
+                print('\nKevin is generating the code... 🤖\n')
                 generate_code_using_definition_file(llm, chain, project_dir, output_dir, context_data, definition_file)
         elif choice == '6':
             edit_existing_code(llm, project_dir)

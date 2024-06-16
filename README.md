@@ -40,37 +40,47 @@ Kevin is an enterprise AI pair programmer because enterprise apps follows standa
 }
 ```
 
-2. Generate Form
-
-```json
-{
-  "file_name": "add-activities.tsx",
-  "fields": [
-    {
-      "name": "activityType",
-      "type": "string",
-      "required": true
-    },
-    {
-      "name": "activityName",
-      "type": "string",
-      "required": true
-    },
-    {
-      "name": "remarks",
-      "type": "string",
-      "required": false
-    }
-  ]
-}
-```
-
-3. Generate API Route
+2. Generate API Route
 
 ```json
 {
   "file_name": "route.ts",
   "model_name": "Tags"
+}
+```
+
+3. Generate API Route with Filters
+
+```json
+{
+  "file_name": "route.ts",
+  "model_name": "Tags",
+  "filters": [
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "case",
+      "type": "Case",
+      "use_array_condition_builder": true,
+      "sub_fields": [
+        {
+          "name": "title"
+        }
+      ]
+    },
+    {
+      "name": "action",
+      "type": "Action",
+      "use_array_condition_builder": true,
+      "sub_fields": [
+        {
+          "name": "title"
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -106,36 +116,26 @@ Kevin is an enterprise AI pair programmer because enterprise apps follows standa
 }
 ```
 
-5. Generate API Route with Filters
+5. Generate Forms
 
 ```json
 {
-  "file_name": "route.ts",
-  "model_name": "Tags",
-  "filters": [
+  "file_name": "add-activities.tsx",
+  "fields": [
     {
-      "name": "name",
-      "type": "string"
+      "name": "activityType",
+      "type": "string",
+      "required": true
     },
     {
-      "name": "case",
-      "type": "Case",
-      "use_array_condition_builder": true,
-      "sub_fields": [
-        {
-          "name": "title"
-        }
-      ]
+      "name": "activityName",
+      "type": "string",
+      "required": true
     },
     {
-      "name": "action",
-      "type": "Action",
-      "use_array_condition_builder": true,
-      "sub_fields": [
-        {
-          "name": "title"
-        }
-      ]
+      "name": "remarks",
+      "type": "string",
+      "required": false
     }
   ]
 }

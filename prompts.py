@@ -68,7 +68,7 @@ def create_error_fetcher_rag_prompt(instructions: str = '') -> ChatPromptTemplat
 
     Strictly respond using the following format only:
     Errors: [insert actual errors here]
-    However, if there are no errors, respond with "No errors found."
+    However, if there are no errors/warnings, strictly respond with "No errors found."
     """
 
     return ChatPromptTemplate.from_template(RAG_PROMPT + instructions)
@@ -158,7 +158,7 @@ def create_route_filters_rag_prompt(instructions: str = '') -> ChatPromptTemplat
     {question}
 
     You are a helpful assistant knowledgeable in creating API routes with specific filters used for fetching data in NextJS. Use the available context to answer the question.
-    
+
     Make sure that aside from the GET method, the methods POST, PATCH, and DELETE are also included in the response.
 
     Strictly respond with actual raw code only. No other text is needed.

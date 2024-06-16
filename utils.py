@@ -62,21 +62,6 @@ def create_langchain(llm: AzureChatOpenAI, prompt: ChatPromptTemplate):
         | prompt | llm | StrOutputParser()
     )
 
-def get_output_directory() -> str:
-    """
-    Prompts the user to enter an output directory and validates the input.
-    """
-    while True:
-        output_dir = input("Enter output directory (type 'bye' to exit): ")
-        if output_dir.lower() == 'bye':
-            return None
-
-        output_dir_path = Path(output_dir)
-        if not output_dir_path.exists() or not output_dir_path.is_dir():
-            print("Invalid location.")
-        else:
-            return output_dir
-
 def extract_code(data: str) -> Tuple[str, str]:
     """
     Extracts the code from the provided data.
