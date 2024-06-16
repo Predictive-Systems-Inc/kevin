@@ -4,6 +4,16 @@ Kevin is an enterprise AI pair programmer designed to streamline the development
 
 ## How to Run
 
+- **Create a Python Virtual Environment (Optional)**:
+  If desired, create a Python virtual environment to isolate dependencies.
+
+  ```bash
+  python -m venv .venv     # Create virtual environment named .venv
+  source .venv/bin/activate   # Activate the virtual environment (for Unix/Linux)
+  # Or
+  .venv\Scripts\activate   # Activate the virtual environment (for Windows)
+  ```
+
 1. **Ensure Dependencies are Installed**:
    Make sure you have `Python` and all required dependencies installed by running `pip install -r requirements.txt`.
 
@@ -11,7 +21,7 @@ Kevin is an enterprise AI pair programmer designed to streamline the development
    Create or modify your definition files `definition-file.json` according to the examples provided.
 
 3. **Execute Kevin**:
-   Run the Kevin using `python kevin.py`.
+   Run Kevin using `python kevin.py`.
 
 4. **Review Generated Code**:
    After execution, review the generated code files in the specified output directory shown in the terminal to ensure they meet your requirements.
