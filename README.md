@@ -73,3 +73,35 @@ Kevin is an enterprise AI pair programmer because enterprise apps follows standa
   "model_name": "Tags"
 }
 ```
+
+4. Generate Table UI
+
+```json
+{
+  "file_name": "case-details-table.tsx",
+  "show_select_column": false,
+  "use_advance_toolbar": true,
+  "columns": [
+    {
+      "name": "caseTitle",
+      "type": "string",
+      "hidden": false
+    },
+    {
+      "name": "caseNumber",
+      "type": "string",
+      "hidden": false
+    },
+    {
+      "name": "priority",
+      "type": "dropdown",
+      "hidden": false
+    },
+    {
+      "name": "assignedTo",
+      "type": "string",
+      "hidden": true
+    }
+  ]
+}
+```

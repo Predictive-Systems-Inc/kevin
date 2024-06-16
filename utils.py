@@ -149,7 +149,7 @@ def list_all_subdirectories_and_files(path: str):
     """
     if not os.path.exists(path) or not os.path.isdir(path):
         raise ValueError(f"Invalid path: {path}")
-    invalid_dirs = ['node_modules', 'ui', 'generated', 'zod', 'config-eslint', 'config-typescript']
+    invalid_dirs = ['node_modules', 'common', 'ui', 'generated', 'zod', 'config-eslint', 'config-typescript']
     structure = {}
     for root, dirs, files in os.walk(path):
         # Filter out directories to skip

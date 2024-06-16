@@ -1,4 +1,27 @@
 {
-  "file_name": "route.ts",
-  "model_name": "Tags"
+  "file_name": "case-details-table.tsx",
+  "show_select_column": false,
+  "use_advance_toolbar": true,
+  "columns": [
+    {
+      "name": "caseTitle",
+      "type": "string",
+      "hidden": false
+    },
+    {
+      "name": "caseNumber",
+      "type": "string",
+      "hidden": false
+    },
+    {
+      "name": "priority",
+      "type": "dropdown",
+      "hidden": false
+    },
+    {
+      "name": "assignedTo",
+      "type": "string",
+      "hidden": true
+    }
+  ]
 }
