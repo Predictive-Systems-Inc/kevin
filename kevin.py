@@ -122,9 +122,16 @@ def edit_existing_code(llm: AzureChatOpenAI, project_dir: str) -> None:
             else:
                 print("Invalid choice. Please try again.")
 
-def load_definition_file(file_path: str = './definition-file.json') -> Dict:
+def load_definition_file(file_path: str, choice: str) -> Dict:
+    json_fields = {
+        '1': 'prisma_schema',
+        '2': 'api_route',
+        '3': 'api_route_filters',
+        '4': 'table_ui',
+        '5': 'form_ui'
+    }
     with open(file_path, 'r') as file:
-        return json.load(file)
+        return  json.loads(file.read())[json_fields[choice]]
 
 def get_output_directory(llm: AzureChatOpenAI, project_dir: str, directories_and_files: Dict, definition_file: Dict, include_model: bool = False) -> Optional[str]:
     directory_chain = create_langchain(llm=llm, prompt=create_directory_fetcher_rag_prompt())
@@ -160,7 +167,7 @@ def main() -> None:
         ])
         
         if choice in ('1', '2', '3', '4', '5'):
-            definition_file = load_definition_file()
+            definition_file = load_definition_file(file_path="./definition-file.json", choice=choice)
             template_subpath = {
                 '1': 'prisma-schemas',
                 '2': 'route',
