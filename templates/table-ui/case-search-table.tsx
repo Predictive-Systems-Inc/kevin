@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import PriorityBadge from '@ui/core/priority-badge'
 import { useDataTable } from '@ui/core/hooks/use-data-table'
@@ -16,31 +15,58 @@ import { CaseWithRelations } from '@db/prisma/zod'
 import { AddCase } from '@app/(protected)/practice-management/case-search/add-case'
 import { Category, Division, Nature, SystemCodes, User } from '@db/prisma'
 import { DataTableFilterField } from '@ui/core/types/index'
+import { CaseSearchTableEmpty } from '@app/(protected)/practice-management/case-search/case-search-table-empty'
+import { SomethingWentWrong } from '@common/components/something-went-wrong'
+import { use, useMemo } from 'react'
 
 interface CaseSearchTableProps {
   casesPromise: Promise<{ data: CaseWithRelations[]; pageCount: number }>
-  natures: Nature[]
-  statuses: SystemCodes[]
-  priorities: SystemCodes[]
-  categories: Category[]
-  divisions: Division[]
-  users: User[]
+  tableData: Promise<{
+    natures: Nature[]
+    statuses: SystemCodes[]
+    priorities: SystemCodes[]
+    categories: Category[]
+    divisions: Division[]
+    users: User[]
+    caseCount: number
+  }>
 }
 
 export function CaseSearchTable({
   casesPromise,
-  natures,
-  statuses,
-  priorities,
-  categories,
-  divisions,
-  users,
+  tableData,
 }: CaseSearchTableProps) {
   // Learn more about React.use here: https://react.dev/reference/react/use
-  const { data, pageCount } = React.use(casesPromise)
+  const { data, pageCount } = use(casesPromise)
+  const {
+    natures,
+    statuses,
+    priorities,
+    categories,
+    divisions,
+    users,
+    caseCount,
+  } = use(tableData)
+
+  if (!data) {
+    return <SomethingWentWrong />
+  }
+
+  if (caseCount === 0) {
+    return (
+      <CaseSearchTableEmpty
+        natures={natures}
+        statuses={statuses}
+        priorities={priorities}
+        categories={categories}
+        divisions={divisions}
+        users={users}
+      />
+    )
+  }
 
   // Memoize the columns so they don't re-render on every render
-  const columns = React.useMemo<ColumnDef<CaseWithRelations, unknown>[]>(
+  const columns = useMemo<ColumnDef<CaseWithRelations, unknown>[]>(
     () => [
       {
         id: 'select',
