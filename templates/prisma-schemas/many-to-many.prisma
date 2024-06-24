@@ -1,0 +1,33 @@
+// Define the User model  
+model User {
+  id        String         @id @default(cuid()) // Unique identifier for each user  
+  email     String         @unique // Unique email for each user  
+  name      String? // Optional name field  
+  projects  UserProjects[] // Relation to the UserProjects model for many-to-many relationship  
+  createdAt DateTime       @default(now()) // Timestamp of user creation  
+  updatedAt DateTime       @updatedAt // Timestamp of the last update  
+}
+
+// Define the Project model  
+model Project {
+  id        String         @id @default(cuid()) // Unique identifier for each project  
+  name      String // Name of the project  
+  users     UserProjects[] // Relation to the UserProjects model for many-to-many relationship  
+  createdAt DateTime       @default(now()) // Timestamp of project creation  
+  updatedAt DateTime       @updatedAt // Timestamp of the last update  
+}
+
+// Define the UserProjects model, which acts as the join table  
+model UserProjects {
+  userId    String // Foreign key referencing the User model  
+  projectId String // Foreign key referencing the Project model  
+  user      User     @relation(fields: [userId], references: [id]) // Relation to the User model  
+  project   Project  @relation(fields: [projectId], references: [id]) // Relation to the Project model  
+  createdAt DateTime @default(now()) // Timestamp of the relationship creation  
+  updatedAt DateTime @updatedAt // Timestamp of the last update  
+
+  // Composite primary key to ensure uniqueness of each user-project pair  
+  @@id([userId, projectId])
+  // Index on projectId to optimize queries involving the project field  
+  @@index([projectId])
+}

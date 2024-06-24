@@ -1,0 +1,114 @@
+{
+  "prisma_schema": {
+    "file_name": "generated_schema.prisma",
+    "model_name": "CaseLocation",
+    "fields": [
+      {
+        "name": "location",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "case",
+        "type": "case",
+        "required": true
+      },
+      {
+        "name": "createdAt",
+        "type": "DateTime",
+        "required": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "DateTime",
+        "required": true
+      },
+      {
+        "name": "deletedAt",
+        "type": "DateTime",
+        "required": false
+      }
+    ]
+  },
+  "api_route":{
+    "file_name": "route.ts",
+    "model_name": "Tags"
+  },
+  "api_route_filters" :{
+    "file_name": "route.ts",
+    "model_name": "Tags",
+    "filters": [
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "case",
+        "type": "Case",
+        "use_array_condition_builder": true,
+        "sub_fields": [
+          {
+            "name": "title"
+          }
+        ]
+      },
+      {
+        "name": "action",
+        "type": "Action",
+        "use_array_condition_builder": true,
+        "sub_fields": [
+          {
+            "name": "title"
+          }
+        ]
+      }
+    ]
+  },
+  "table_ui": {
+    "file_name": "case-details-table.tsx",
+    "show_select_column": false,
+    "use_advance_toolbar": true,
+    "columns": [
+      {
+        "name": "caseTitle",
+        "type": "string",
+        "hidden": false
+      },
+      {
+        "name": "caseNumber",
+        "type": "string",
+        "hidden": false
+      },
+      {
+        "name": "priority",
+        "type": "dropdown",
+        "hidden": false
+      },
+      {
+        "name": "assignedTo",
+        "type": "string",
+        "hidden": true
+      }
+    ]
+  },
+  "form_ui" : {
+    "file_name": "add-activities.tsx",
+    "fields": [
+      {
+        "name": "activityType",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "activityName",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "remarks",
+        "type": "string",
+        "required": false
+      }
+    ]
+  }
+}
